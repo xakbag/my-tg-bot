@@ -4,14 +4,14 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import openai
 
-# Настройка логирования
+# Логирование
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# Инициализация OpenAI
+# Настройка OpenAI
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -20,7 +20,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"User {chat_id} asks: {user_text}")
 
     try:
-        # Отправляем запрос к ChatGPT
         response = openai.ChatCompletion.create(
             model='gpt-4o-mini',
             messages=[{'role': 'user', 'content': user_text}]
@@ -30,7 +29,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"OpenAI API error: {e}")
         answer = "Извините, возникла ошибка при обращении к API."
 
-    # Отправляем ответ обратно пользователю
     await context.bot.send_message(chat_id=chat_id, text=answer)
 
 async def main():
@@ -39,7 +37,6 @@ async def main():
         logger.error("Переменная TELEGRAM_TOKEN не задана")
         return
 
-    # Создаём приложение и регистрируем обработчик
     app = ApplicationBuilder().token(telegram_token).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
