@@ -1,48 +1,27 @@
 import os
-import logging
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import openai
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-# Логирование
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+openai.api_key = os.getenv("OPENAI_API_KEY")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-# Настройка OpenAI
-openai.api_key = os.getenv('OPENAI_API_KEY')
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Привет! Я бот, напиши мне что-нибудь.")
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-    chat_id = update.effective_chat.id
-    logger.info(f"User {chat_id} asks: {user_text}")
-
+async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_message = update.message.text
     try:
         response = openai.ChatCompletion.create(
-            model='gpt-4o-mini',
-            messages=[{'role': 'user', 'content': user_text}]
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": user_message}]
         )
-        answer = response.choices[0].message.content.strip()
+        reply = response.choices[0].message.content
+        await update.message.reply_text(reply)
     except Exception as e:
-        logger.error(f"OpenAI API error: {e}")
-        answer = "Извините, возникла ошибка при обращении к API."
+        await update.message.reply_text(f"Ошибка: {e}")
 
-    await context.bot.send_message(chat_id=chat_id, text=answer)
-
-async def main():
-    telegram_token = os.getenv('TELEGRAM_TOKEN')
-    if not telegram_token:
-        logger.error("Переменная TELEGRAM_TOKEN не задана")
-        return
-
-    app = ApplicationBuilder().token(telegram_token).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-    logger.info("Bot started")
-    await app.run_polling()
-
-if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+app.run_polling()
